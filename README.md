@@ -1,4 +1,4 @@
-# matrix_efeito_python
+# Matrix Efeito
 O efeito do matrix - letras verdes em movimento - feitos em Python. Este código tem alguns "features" adicionais como mudança de cores, e, a velocidade das letras em movimento.
 
 ### como mexer no programa.
