@@ -1,4 +1,4 @@
-#!/usr/bin/python3.8
+#!/usr/bin/python3.8 -O
 
 # bibliotecas:
 from curses import (
@@ -10,6 +10,9 @@ from curses import (
 from os import get_terminal_size, execv
 from random import choice
 from math import floor
+from time import time
+from sys import argv
+from enum import IntEnum
 # meus módulos:
 from roleta import Roleta
 from array import array as Array
@@ -34,14 +37,25 @@ RAINBOW_MODE = True
 # espaços entre fileiras.
 FILEIRAS_ESPACOS = 4 
 
+class Velocidades(IntEnum):
+   # valores significam milisegundos.
+   MUITO_BAIXA = 200
+   BAIXA = 100 
+   MEDIA_BAIXA = 50
+   MEDIA_ALTA = 10
+   ALTA = 5
+   MUITO_ALTA = 3
+...
+   
 
 # barra de progresso da velocidade:
-def barra_velocidade(velocidade_atual):
+def barra_velocidade(velocidade):
+   velocidade_atual = indice_velocidade(velocidade)
    # um pontinho para cada nível.
-   barra = '.' * len(velocidades)
+   barra = '.' * len(Velocidades)
    progresso = (
       barra[1:velocidade_atual] 
-         + '#' + 
+            + '#' + 
       barra[velocidade_atual:]
    )
    return '- %s +' % progresso
@@ -84,14 +98,55 @@ def imprime_matriz(janela):
    ...
 ...
 
+def proxima_velocidade(atual):
+   indice = None
+   total = len(Velocidades)
+   velocidade = None
+   tabela = {}
+
+   for (i, e) in enumerate(Velocidades):
+      if e is atual:
+         indice = i
+      ...
+      tabela[i] = e
+   ...
+
+   return tabela[(indice + 1) % total]
+...
+
+def velocidade_anterior(atual):
+   indice = None
+   total = len(Velocidades)
+   velocidade = None
+   tabela = {}
+
+   for (i, e) in enumerate(Velocidades):
+      if e is atual:
+         indice = i
+      ...
+      tabela[i] = e
+   ...
+
+   return tabela[(indice - 1) % total]
+...
+
+def indice_velocidade(v):
+   for (i, e) in enumerate(Velocidades):
+      if e is v:
+         return (i + 1)
+      ...
+   ...
+...
+   
+
 def main(janela):
-   global MOSTRA_BARRA_STATUS, UNICA_DIRECAO
    # execução da janela:
    janela = initscr() # criando uma janela.
-   start_color() # inicializando cores do sistema.
-   curs_set(False) # desabilitando cursor.
+   # configuração do 'curses'.
+   start_color()
+   curs_set(False)
    #curses.use_default_colors()
-   noecho() # tirando echo ao digitar.
+   noecho() 
 
    # paletas de cores:
    for i in range(0, 8): 
@@ -106,17 +161,27 @@ def main(janela):
       for i in range(1, n)
    ]
    # tecla ativida para algumans configurações.
-   janela.nodelay(True) # não interroper loop por causa do input.
-   (tecla, v) = (-1, 3) # só "declarando" variável.
+   # não interroper loop por causa do input.
+   janela.nodelay(True) 
+   # só "declarando" variável.
+   (tecla, v) = (-1, Velocidades.MEDIA_BAIXA) 
+
+   global MOSTRA_BARRA_STATUS, RAINBOW_MODE
    # até for interrompido com o teclado, ficar
    # alternando entre as roletas, dado uma 
    # limite de tempo.
+   total = len(Velocidades)
    while tecla != ord('s'):
+      # proposições:
+      atingiu_teto = v is not Velocidades.MUITO_ALTA
+      atingiu_piso = v is not Velocidades.MUITO_BAIXA
       # alterando as configurações:
-      if tecla == ord('+') and v <= len(velocidades)-1: 
-         v += 1 # aumenta velocidade.
-      elif tecla == ord('-') and v > 1: 
-         v-=1 # diminui velocidade.
+      if tecla == ord('+') and atingiu_teto:
+         # aumenta velocidade.
+         v = proxima_velocidade(v) 
+      elif tecla == ord('-') and atingiu_piso:
+         # diminui velocidade.
+         v = velocidade_anterior(v)
       elif tecla == ord('b'): 
          # se estiver desativdo, então ativa.
          if not MOSTRA_BARRA_STATUS: 
@@ -130,7 +195,7 @@ def main(janela):
          else: 
             RAINBOW_MODE = False
       elif tecla == KEY_RESIZE:
-         # executa o programa, para se 
+         # reexecuta o programa, para se 
          # adequar a nova dimensão.
          napms(600)
          # terminando antigo...
@@ -141,23 +206,75 @@ def main(janela):
          codigo = "./matrix.py"
          execv(programa, ("-B", codigo,))
 
-      tecla = janela.getch() # obtendo entrada.
+      # obtendo entrada.
+      tecla = janela.getch() 
+
       for obj in roletas: 
          obj.um_deslizamento()
-      janela.refresh() # atualizando tela.
-      imprime_matriz(janela) # imprime matriz.
+
+      # atualiza tela e desenha matriz novamente.
+      janela.refresh() 
+      imprime_matriz(janela)
       # pausa(definindo velocidade)
-      napms(velocidades[v])       
+      napms(int(v))       
+
       # atual dimensão do terminal na tela.
       if MOSTRA_BARRA_STATUS: 
          barra_status_visor(janela,v,n)
-   endwin() # finalizando...
+   ...
+
+   # finalizando...
+   endwin() 
 ...
 
+# baseado nos argumentos passados
+# definir o melhor modo de execução.
+def menu():
+   global RAINBOW_MODE, MOSTRA_BARRA_STATUS
+
+   if "classico" in argv or "arco-iris" in argv:
+      if "classico" in argv:
+         RAINBOW_MODE = False
+      elif "arco-íris" in argv:
+         RAINBOW_MODE = True
+   ...
+
+   if "sem-status" in argv:
+      MOSTRA_BARRA_STATUS = False
+...
+   
 
 # execução de testes.
 if __name__ == '__main__':
+   menu()
+   ti = time()
    wrapper(main)
+   tf = int(abs(ti - time()))
+
+   if __debug__:
+      print("\n\n")
+      for v in Velocidades:
+         proxima = proxima_velocidade(v)
+         print(v, proxima, sep="==>")
+      ...
+      print("\n\n")
+      for v in Velocidades:
+         proxima = velocidade_anterior(v)
+         print(v, proxima, sep="==>")
+      ...
+      print("\n\n")
+   ...
+
+   def legivel(segundos):
+      if segundos >= 60 and segundos <= 3600:
+         return str(segundos // 60) + "min"
+      elif segundos >= 3600:
+         return str(segundos // 3600) + "h"
+      else:
+         return "%iseg" % segundos
+   ...
+
    print("programa finalizado.")
+   print("duração de %s." % legivel(tf))
 ...
 

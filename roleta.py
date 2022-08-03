@@ -1,4 +1,6 @@
 import random, string
+from arquivo_espaguetificacao import string_codigo_aleatoria
+
 # cria e retorna string com tal comprimento
 # de caractéres.
 def string_aleatoria(comprimento):
@@ -39,7 +41,8 @@ def strings_longas():
 class Roleta:
    def __init__(self,  direcao, coluna, matriz):
       # string com quantia pre-definida de caractéres.
-      self.str0 = strings_longas()
+      #self.str0 = strings_longas()
+      self.str0 = string_codigo_aleatoria()
       # define se a string vai para cima
       # ou para baixo. Verdadeiro, para cima
       # "falso" para baixo.
