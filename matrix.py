@@ -1,11 +1,11 @@
-#!/usr/bin/python3.8 -O
+#!/usr/bin/python3.8 -BO
 
 # bibliotecas:
 from curses import (
    napms, initscr, init_pair, wrapper,
    A_BOLD, color_pair, start_color,
    curs_set, noecho, COLOR_BLACK, 
-   KEY_RESIZE, endwin
+   KEY_RESIZE, endwin, error as CursesError
 )
 from os import get_terminal_size, execv
 from random import choice
@@ -46,7 +46,20 @@ class Velocidades(IntEnum):
    ALTA = 5
    MUITO_ALTA = 3
 ...
-   
+
+class Referencia:
+   def __init__(self, dado):
+      self._dado = dado
+   def retorna(self):
+      return self._dado
+   def altera(self, novo_valor):
+      self._dado = novo_valor
+   def deleta(self):
+      print("destrói referência.")
+      del self
+   valor = property(retorna, altera, deleta, "simples referência de dado")
+...
+
 
 # barra de progresso da velocidade:
 def barra_velocidade(velocidade):
@@ -84,7 +97,10 @@ def imprime_matriz(janela):
          cor = paletas[k]
          for i in range(Y): 
             char = matriz[i][k]
-            janela.addch(i, k, char,cor)
+            if char.isprintable():
+               janela.addch(i, k, char,cor)
+            else:
+               janela.addch(i, k, '#', cor)
          ...
       ...
    else:
@@ -137,11 +153,10 @@ def indice_velocidade(v):
       ...
    ...
 ...
-   
 
 def main(janela):
    # execução da janela:
-   janela = initscr() # criando uma janela.
+   janela = initscr() 
    # configuração do 'curses'.
    start_color()
    curs_set(False)
@@ -163,64 +178,29 @@ def main(janela):
    # tecla ativida para algumans configurações.
    # não interroper loop por causa do input.
    janela.nodelay(True) 
-   # só "declarando" variável.
-   (tecla, v) = (-1, Velocidades.MEDIA_BAIXA) 
 
-   global MOSTRA_BARRA_STATUS, RAINBOW_MODE
+   # só "declarando" variável.
+   tecla = None
+   v = Referencia(Velocidades.MEDIA_BAIXA)
    # até for interrompido com o teclado, ficar
    # alternando entre as roletas, dado uma 
    # limite de tempo.
    total = len(Velocidades)
    while tecla != ord('s'):
-      # proposições:
-      atingiu_teto = v is not Velocidades.MUITO_ALTA
-      atingiu_piso = v is not Velocidades.MUITO_BAIXA
-      # alterando as configurações:
-      if tecla == ord('+') and atingiu_teto:
-         # aumenta velocidade.
-         v = proxima_velocidade(v) 
-      elif tecla == ord('-') and atingiu_piso:
-         # diminui velocidade.
-         v = velocidade_anterior(v)
-      elif tecla == ord('b'): 
-         # se estiver desativdo, então ativa.
-         if not MOSTRA_BARRA_STATUS: 
-            MOSTRA_BARRA_STATUS = True
-         else: 
-            MOSTRA_BARRA_STATUS = False
-      elif tecla == ord('r'):
-         # ativa e desativa modo arco-íris.
-         if not RAINBOW_MODE: 
-            RAINBOW_MODE = True
-         else: 
-            RAINBOW_MODE = False
-      elif tecla == KEY_RESIZE:
-         # reexecuta o programa, para se 
-         # adequar a nova dimensão.
-         napms(600)
-         # terminando antigo...
-         endwin() 
-         # interpletador python.
-         programa = "/usr/bin/python3"
-         # meu código no diretório.
-         codigo = "./matrix.py"
-         execv(programa, ("-B", codigo,))
-
-      # obtendo entrada.
+      # mudando atributos de acordo com a
+      # tecla pressionada.
+      controle(janela, tecla, v, para_baixo)
       tecla = janela.getch() 
 
       for obj in roletas: 
          obj.um_deslizamento()
 
-      # atualiza tela e desenha matriz novamente.
       janela.refresh() 
       imprime_matriz(janela)
-      # pausa(definindo velocidade)
-      napms(int(v))       
+      napms(int(v.valor))       
 
-      # atual dimensão do terminal na tela.
       if MOSTRA_BARRA_STATUS: 
-         barra_status_visor(janela,v,n)
+         barra_status_visor(janela, v.valor, n)
    ...
 
    # finalizando...
@@ -241,6 +221,55 @@ def menu():
 
    if "sem-status" in argv:
       MOSTRA_BARRA_STATUS = False
+...
+
+# tomas algumas ações, ou alteras valores dado
+# a tecla pressionada.
+def controle(janela, tecla, v, sentido):
+   # proposições:
+   atingiu_teto = v.valor is not Velocidades.MUITO_ALTA
+   atingiu_piso = v.valor is not Velocidades.MUITO_BAIXA
+
+   global MOSTRA_BARRA_STATUS, RAINBOW_MODE
+   if tecla == ord('+') and atingiu_teto:
+      # aumenta velocidade.
+      v.valor = proxima_velocidade(v.valor) 
+   elif tecla == ord('-') and atingiu_piso:
+      # diminui velocidade.
+      v.valor = velocidade_anterior(v.valor)
+   elif tecla == ord('b'): 
+      # se estiver desativdo, então ativa.
+      if not MOSTRA_BARRA_STATUS: 
+         MOSTRA_BARRA_STATUS = True
+      else: 
+         MOSTRA_BARRA_STATUS = False
+   elif tecla == ord('r'):
+      # ativa e desativa modo arco-íris.
+      if not RAINBOW_MODE: 
+         RAINBOW_MODE = True
+      else: 
+         RAINBOW_MODE = False
+   elif tecla == KEY_RESIZE:
+      (y, x) = janela.getmaxyx()
+      # reexecuta o programa, para se 
+      # adequar a nova dimensão.
+      # terminando antigo...
+      mensagem = "redimensionando no momento ...".upper()
+      y = y // 2
+      x = x // 2 - len(mensagem)
+      n = int(floor(X / FILEIRAS_ESPACOS))
+      roletas = [
+         Roleta(sentido, FILEIRAS_ESPACOS*i, matriz) 
+         for i in range(1, n)
+      ]
+      
+      # redimensionando "roletas" idem.
+      # interpletador python.
+      programa = "/usr/bin/python3"
+      # meu código no diretório.
+      codigo = "matrix.py"
+      execv(programa, ("-B", codigo))
+   ...
 ...
    
 
