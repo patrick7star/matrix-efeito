@@ -1,4 +1,12 @@
 # Matrix Efeito
+
+<!-- adicionando versões compátiveis. -->
+<h3> versões:&nbsp &nbsp
+<a href="https://github.com/TheAlgorithms/">
+    <img src="https://img.shields.io/pypi/pyversions/tomlkit.svg?logo=python&logoColor=white" height="15">
+</a>
+</h3>
+
 O efeito do matrix - letras verdes em movimento - feitos em Python. Este código tem alguns "features" adicionais como mudança de cores, e, a velocidade das letras em movimento.
 
 ### como mexer no programa.
