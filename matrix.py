@@ -4,7 +4,7 @@
 from curses import (
    napms, initscr, init_pair, wrapper,
    A_BOLD, color_pair, start_color,
-   curs_set, noecho, COLOR_BLACK, 
+   curs_set, noecho, COLOR_BLACK,
    KEY_RESIZE, endwin, error as CursesError
 )
 from os import get_terminal_size, execv
@@ -31,16 +31,16 @@ matriz = [Array('u', [' '] * X) for _ in range(Y)]
 # definições com o programa em execução:
 velocidades = {1:200, 2:100, 3:50, 4:10, 5:5, 6:3}
 # visualizar barra de status?
-MOSTRA_BARRA_STATUS = True 
+MOSTRA_BARRA_STATUS = True
 # fileiras multi-coloridas.
-RAINBOW_MODE = True 
+RAINBOW_MODE = True
 # espaços entre fileiras.
-FILEIRAS_ESPACOS = 4 
+FILEIRAS_ESPACOS = 4
 
 class Velocidades(IntEnum):
    # valores significam milisegundos.
    MUITO_BAIXA = 200
-   BAIXA = 100 
+   BAIXA = 100
    MEDIA_BAIXA = 50
    MEDIA_ALTA = 10
    ALTA = 5
@@ -67,8 +67,8 @@ def barra_velocidade(velocidade):
    # um pontinho para cada nível.
    barra = '.' * len(Velocidades)
    progresso = (
-      barra[1:velocidade_atual] 
-            + '#' + 
+      barra[1:velocidade_atual]
+            + '#' +
       barra[velocidade_atual:]
    )
    return '- %s +' % progresso
@@ -89,13 +89,13 @@ def barra_status_visor(janela, nivel, numero):
 def imprime_matriz(janela):
    # imprimindo a matriz dentro do "curses".
    if RAINBOW_MODE:
-      paletas = [ 
-         color_pair(i % 7) | A_BOLD 
+      paletas = [
+         color_pair(i % 7) | A_BOLD
          for i in range(X-2)
       ]
       for k in range(X-2):
          cor = paletas[k]
-         for i in range(Y): 
+         for i in range(Y):
             char = matriz[i][k]
             if char.isprintable():
                janela.addch(i, k, char,cor)
@@ -105,10 +105,10 @@ def imprime_matriz(janela):
       ...
    else:
       for i in range(Y):
-         for j in range(X-2): 
+         for j in range(X-2):
             cor = color_pair(3) | A_BOLD
             char = matriz[i][j]
-            janela.addch(i, j, char, cor) 
+            janela.addch(i, j, char, cor)
          ...
       ...
    ...
@@ -156,55 +156,60 @@ def indice_velocidade(v):
 
 def main(janela):
    # execução da janela:
-   janela = initscr() 
+   janela = initscr()
    # configuração do 'curses'.
    start_color()
    curs_set(False)
    #curses.use_default_colors()
-   noecho() 
+   noecho()
 
    # paletas de cores:
-   for i in range(0, 8): 
+   for i in range(0, 8):
       init_pair(i+1, i, COLOR_BLACK)
 
    # dados de configuração:
    n = int(floor(X / FILEIRAS_ESPACOS))
-   # direção original?
-   para_baixo = choice([False, True]) 
    roletas = [
-      Roleta(para_baixo, FILEIRAS_ESPACOS*i, matriz) 
+      Roleta(
+         # direção para baixo ou cima
+         # da 'Roleta'.
+         choice([False, True]),
+         FILEIRAS_ESPACOS * i,
+         matriz
+      )
       for i in range(1, n)
    ]
    # tecla ativida para algumans configurações.
    # não interroper loop por causa do input.
-   janela.nodelay(True) 
+   janela.nodelay(True)
 
    # só "declarando" variável.
    tecla = None
    v = Referencia(Velocidades.MEDIA_BAIXA)
    # até for interrompido com o teclado, ficar
-   # alternando entre as roletas, dado uma 
+   # alternando entre as roletas, dado uma
    # limite de tempo.
    total = len(Velocidades)
    while tecla != ord('s'):
       # mudando atributos de acordo com a
       # tecla pressionada.
-      controle(janela, tecla, v, para_baixo)
-      tecla = janela.getch() 
+      controle(janela, tecla, v)
+      tecla = janela.getch()
 
-      for obj in roletas: 
+      # rolando cada tira uma vez.
+      for obj in roletas:
          obj.um_deslizamento()
 
-      janela.refresh() 
+      janela.refresh()
       imprime_matriz(janela)
-      napms(int(v.valor))       
+      napms(int(v.valor))
 
-      if MOSTRA_BARRA_STATUS: 
+      if MOSTRA_BARRA_STATUS:
          barra_status_visor(janela, v.valor, n)
    ...
 
    # finalizando...
-   endwin() 
+   endwin()
 ...
 
 # baseado nos argumentos passados
@@ -225,7 +230,7 @@ def menu():
 
 # tomas algumas ações, ou alteras valores dado
 # a tecla pressionada.
-def controle(janela, tecla, v, sentido):
+def controle(janela, tecla, v):
    # proposições:
    atingiu_teto = v.valor is not Velocidades.MUITO_ALTA
    atingiu_piso = v.valor is not Velocidades.MUITO_BAIXA
@@ -233,25 +238,25 @@ def controle(janela, tecla, v, sentido):
    global MOSTRA_BARRA_STATUS, RAINBOW_MODE
    if tecla == ord('+') and atingiu_teto:
       # aumenta velocidade.
-      v.valor = proxima_velocidade(v.valor) 
+      v.valor = proxima_velocidade(v.valor)
    elif tecla == ord('-') and atingiu_piso:
       # diminui velocidade.
       v.valor = velocidade_anterior(v.valor)
-   elif tecla == ord('b'): 
+   elif tecla == ord('b'):
       # se estiver desativdo, então ativa.
-      if not MOSTRA_BARRA_STATUS: 
+      if not MOSTRA_BARRA_STATUS:
          MOSTRA_BARRA_STATUS = True
-      else: 
+      else:
          MOSTRA_BARRA_STATUS = False
    elif tecla == ord('r'):
       # ativa e desativa modo arco-íris.
-      if not RAINBOW_MODE: 
+      if not RAINBOW_MODE:
          RAINBOW_MODE = True
-      else: 
+      else:
          RAINBOW_MODE = False
    elif tecla == KEY_RESIZE:
       (y, x) = janela.getmaxyx()
-      # reexecuta o programa, para se 
+      # reexecuta o programa, para se
       # adequar a nova dimensão.
       # terminando antigo...
       mensagem = "redimensionando no momento ...".upper()
@@ -259,10 +264,15 @@ def controle(janela, tecla, v, sentido):
       x = x // 2 - len(mensagem)
       n = int(floor(X / FILEIRAS_ESPACOS))
       roletas = [
-         Roleta(sentido, FILEIRAS_ESPACOS*i, matriz) 
+         Roleta(
+            # direção para baixo ou cima
+            # da 'Roleta'.
+            choice([False, True]),
+            FILEIRAS_ESPACOS * i,
+            matriz
+         )
          for i in range(1, n)
       ]
-      
       # redimensionando "roletas" idem.
       # interpletador python.
       programa = "/usr/bin/python3"
@@ -271,7 +281,7 @@ def controle(janela, tecla, v, sentido):
       execv(programa, ("-B", codigo))
    ...
 ...
-   
+
 
 # execução de testes.
 if __name__ == '__main__':
