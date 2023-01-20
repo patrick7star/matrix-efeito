@@ -10,12 +10,13 @@ from curses import (
 from os import get_terminal_size, execv
 from random import choice
 from math import floor
-from time import time
+from time import time, sleep
 from sys import argv
 from enum import IntEnum
 # meus módulos:
 from roleta import Roleta
 from array import array as Array
+import _thread as Thread
 
 # dimensões do terminal que roda tal.
 terminal = get_terminal_size()
@@ -24,12 +25,7 @@ terminal = get_terminal_size()
 # matriz que "pixela" tela com caractéres.
 matriz = [Array('u', [' '] * X) for _ in range(Y)]
 
-# variáveis de configuração.
-# tempo para descer cada variável num mapa, onde
-# quanto maior chave, menor o tempo, consequentemente
-# maior a velocidade.
 # definições com o programa em execução:
-velocidades = {1:200, 2:100, 3:50, 4:10, 5:5, 6:3}
 # visualizar barra de status?
 MOSTRA_BARRA_STATUS = True
 # fileiras multi-coloridas.
@@ -38,7 +34,13 @@ RAINBOW_MODE = True
 FILEIRAS_ESPACOS = 4
 
 class Velocidades(IntEnum):
-   # valores significam milisegundos.
+   """
+    variáveis de configuração.
+    tempo para descer cada variável num mapa, 
+    onde quanto maior chave, menor o tempo, 
+    consequentemente maior a velocidade.
+    Tempos estão em milisegundos.
+   """
    MUITO_BAIXA = 200
    BAIXA = 100
    MEDIA_BAIXA = 50
@@ -190,15 +192,22 @@ def main(janela):
    # alternando entre as roletas, dado uma
    # limite de tempo.
    total = len(Velocidades)
+
+   # criando todas threads que rolam 
+   # roletas independentemente. Nano
+   # segundos antes de o loop começar.
+   ids = Array('L', [])
+   for r in roletas:
+      argumentos = (r, v)
+      funcao = gira_manivela 
+      ids.append(Thread.start_new_thread(funcao, argumentos))
+   ...
+
    while tecla != ord('s'):
       # mudando atributos de acordo com a
       # tecla pressionada.
       controle(janela, tecla, v)
       tecla = janela.getch()
-
-      # rolando cada tira uma vez.
-      for obj in roletas:
-         obj.um_deslizamento()
 
       janela.refresh()
       imprime_matriz(janela)
@@ -210,6 +219,15 @@ def main(janela):
 
    # finalizando...
    endwin()
+   # finalizando threads...
+   try:
+      Thread.interrupt_main()
+   except KeyboardInterrupt:
+      print(
+         "todas {} 'threads', terminadas."
+         .format(len(ids))
+      )
+   ...
 ...
 
 # baseado nos argumentos passados
@@ -282,6 +300,19 @@ def controle(janela, tecla, v):
    ...
 ...
 
+# move as roleta dada, dando 
+# pausas específicas, indefinidamente.
+# função está separada do 'loop', para
+# que seja chamada via 'thread'. Tais
+# pausas são a referência a velocidade,
+# também usada na 'thread principal'.
+def gira_manivela(roleta, velocidade):
+   while True:
+      roleta.um_deslizamento()
+      miliseg = velocidade.valor / 1_000
+      sleep(miliseg)
+   ...
+...
 
 # execução de testes.
 if __name__ == '__main__':

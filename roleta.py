@@ -1,11 +1,17 @@
-import random, string
+
+# biblioteca do Python:
+import string
 from arquivo_espaguetificacao import string_codigo_aleatoria
+from random import randint
+from array import array as Array
 
 # cria e retorna string com tal comprimento
 # de caractéres.
 def string_aleatoria(comprimento):
-   str0 = ''
-   opcoes = [x for x in string.__dict__.keys() if not x.startswith('_')] 
+   opcoes = [
+      x for x in string.__dict__.keys() 
+      if not x.startswith('_')
+   ] 
    opcoes.remove('Formatter')
    opcoes.remove('Template')
    # adicionando alfabeto grego.
@@ -16,24 +22,29 @@ def string_aleatoria(comprimento):
    opcoes.append("".join(alfabeto))
    # adicionando alfabeto japonês.
    #opcoes.append("".join([chr(v) for v in range(0x30a1, 0x30fb)]))
+   # concatenação.
+   strings = ''
    for i in range(comprimento):
-      str0 += random.choice("".join(opcoes))
-   return str0
+      strings.append(random.choice("".join(opcoes)))
+   return "".join(strings)
 ...
 
 # uma string com espaços em branco formada de 
 # forma aleatória.
 def string_branca_CA():
-	return " " * random.randint(5, 18)
+	return " " * randint(5, 18)
 
 def strings_longas():
-   i, _str = 1, ""
-   while i <= 10:
-      _str += (string_branca_CA()+string_aleatoria(30) + 
-      string_branca_CA() + string_aleatoria(20) + 
-      string_branca_CA())
-      i += 1
-   return _str
+   strings = Array('u', [])
+   for _ in range(10):
+      strings.append(string_branca_CA())
+      strings.append(string_aleatoria(30))
+      strings.append(string_branca_CA())
+      strings.append(string_aleatoria(20))
+      strings.append(string_branca_CA())
+   ...
+   # cocatena numa longa string.
+   return "".join(strings)
 ...
 
 # roleta que simula uma string infinita, rolando pela 
@@ -54,7 +65,7 @@ class Roleta:
       # matriz que onde será impressa.
       self.matriz = matriz
       # computando suas dimensões...
-      self.Y, self.X = len(matriz), len(matriz[0])
+      (self.Y, self.X) = (len(matriz), len(matriz[0]))
       #(self.Y, self.X) = matriz.dimensao()
    ...
 
@@ -83,3 +94,6 @@ class Roleta:
          self.p = 0
    ...
 ...
+
+__all__ = ["Roleta", "strings_longas"]
+
